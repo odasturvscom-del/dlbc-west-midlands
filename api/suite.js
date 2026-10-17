@@ -1,6 +1,6 @@
 // /api/suite: the church management suite (people, giving, finance, teams, services, comms).
 // Same session + roles as the rest of the site. Money is stored in integer pence.
-import { wrap, redis, one, parse, pairs, send, body, requireRole, HttpError } from "./_lib.js";
+import { wrap, redis, one, parse, pairs, send, body, requireRole, HttpError, RANK } from "./_lib.js";
 
 /* Access: read/write/delete are minimum RANK levels; roles narrows further. */
 const M = {
