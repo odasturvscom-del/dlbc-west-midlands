@@ -1968,7 +1968,7 @@ wireAdmin = function(){
   _wireAdmin();
   const foot = $(".adm-side .foot");
   if (foot && !$("#signOut")) { const b = document.createElement("button"); b.type = "button"; b.id = "signOut"; b.className = "btn ghost sm"; b.textContent = "Sign out"; b.onclick = signOut; foot.insertBefore(b, foot.children[2] || null); }
-  const suiteLink = document.createElement("a"); suiteLink.href = "/suite"; suiteLink.className = "btn ghost sm"; suiteLink.textContent = "Church Suite"; suiteLink.target = "_blank"; suiteLink.rel = "noopener"; foot.insertBefore(suiteLink, foot.children[2] || null); }
+  const suiteLink = document.createElement("a"); suiteLink.href = "/suite"; suiteLink.className = "btn ghost sm"; suiteLink.textContent = "Church Suite"; suiteLink.target = "_blank"; suiteLink.rel = "noopener"; foot.insertBefore(suiteLink, foot.children[2] || null);
   const so2 = $("#signOut2"); if (so2) so2.onclick = signOut;
   const drv = $("#drvBtn"); if (drv) drv.onclick = () => driveModal();
   $$("[data-copy]").forEach(btn => btn.onclick = async () => { try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied"; } catch(e){} });
