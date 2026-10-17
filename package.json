@@ -1,0 +1,8 @@
+{
+  "name": "deeper-life-west-midlands",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deeper Life Bible Church, West Midlands website and admin portal",
+  "engines": { "node": ">=18" }
+}
