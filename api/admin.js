@@ -1,6 +1,6 @@
 // /api/admin: everything the admin portal changes. Every call checks the signed-in person's role.
 import crypto from "node:crypto";
-import { wrap, body, send, one, redis, pairs, parse, HttpError, requireRole, RANK, hashPassword, validEmail, validPassword, publicUser } from "./_lib.js";
+import { wrap, body, send, one, redis, pairs, parse, HttpError, requireRole, RANK, ROLE_NAMES, hashPassword, validEmail, validPassword, publicUser, audit } from "./_lib.js";
 
 // Who may change what (minimum role).
 const DOC_ROLE = { "site/settings": "admin", "site/campuses": "admin", "site/ministries": "editor" };
@@ -32,6 +32,9 @@ export default wrap(async (req, res) => {
   if (req.method !== "POST") throw new HttpError(405, "Use GET or POST.");
   const b = body(req);
   const path = String(b.path || "");
+  const who = await requireRole(req, ["owner", "admin", "editor", "finance", "pastoral"]);
+  const label = (b.data && (b.data.title || b.data.name)) || b.email || b.id || "";
+  const done = async (out = { ok: true }) => { await audit(who, b.op, path || b.email || "inbox", label); send(res, 200, out); };
 
   /* ---------- content ---------- */
   if (b.op === "set" || b.op === "patch" || b.op === "delete") {
@@ -49,7 +52,7 @@ export default wrap(async (req, res) => {
         checkSize(b.data);
         await one("SET", key, JSON.stringify(b.data));
       } else throw new HttpError(400, "Not allowed.");
-      return send(res, 200, { ok: true });
+      return done();
     }
     const [col, id, extra] = path.split("/");
     if (extra !== undefined || !ID.test(id || "")) throw new HttpError(400, "Bad path.");
@@ -57,11 +60,11 @@ export default wrap(async (req, res) => {
       await requireRole(req, "editor");
       if (b.op === "delete") await one("HDEL", "col:" + col, id);
       else { checkSize(b.data, 100_000); await one("HSET", "col:" + col, id, JSON.stringify(b.data)); }
-      return send(res, 200, { ok: true });
+      return done();
     }
     if (col === "media") {
       await requireRole(req, "editor");
-      if (b.op === "delete") { await redis(["HDEL", "media:data", id], ["HDEL", "media:meta", id]); return send(res, 200, { ok: true }); }
+      if (b.op === "delete") { await redis(["HDEL", "media:data", id], ["HDEL", "media:meta", id]); return done(); }
       const d = b.data || {};
       const meta = { name: String(d.name || "Photo").slice(0, 100), w: +d.w || 0, h: +d.h || 0, at: new Date().toISOString() };
       if (/^https:\/\//.test(d.data || "")) { // a link to a photo stored elsewhere (e.g. Google Drive): nothing is stored here but the link
@@ -72,7 +75,7 @@ export default wrap(async (req, res) => {
         if (d.data.length > 1_400_000) throw new HttpError(413, "That photo is too large.");
         await redis(["HSET", "media:data", id, d.data], ["HSET", "media:meta", id, JSON.stringify(meta)]);
       }
-      return send(res, 200, { ok: true });
+      return done();
     }
     throw new HttpError(400, "Bad path.");
   }
@@ -81,12 +84,12 @@ export default wrap(async (req, res) => {
   if (b.op === "inbox-handle" || b.op === "inbox-delete") {
     await requireRole(req, ["owner", "admin", "pastoral"]);
     const id = String(b.id || "");
-    if (b.op === "inbox-delete") { await one("HDEL", "inbox", id); return send(res, 200, { ok: true }); }
+    if (b.op === "inbox-delete") { await one("HDEL", "inbox", id); return done(); }
     const item = parse(await one("HGET", "inbox", id));
     if (!item) throw new HttpError(404, "Message not found.");
     item.handled = !!b.handled;
     await one("HSET", "inbox", id, JSON.stringify(item));
-    return send(res, 200, { ok: true });
+    return done();
   }
 
   /* ---------- users & access ---------- */
@@ -100,25 +103,25 @@ export default wrap(async (req, res) => {
     if (b.op === "user-delete") {
       if (!existing) throw new HttpError(404, "User not found.");
       await one("HDEL", "users", email);
-      return send(res, 200, { ok: true });
+      return done();
     }
     if (b.op === "user-reset") {
       if (!existing) throw new HttpError(404, "User not found.");
       const temp = randomPassword();
       await one("HSET", "users", email, JSON.stringify({ ...existing, ...hashPassword(temp), ver: (existing.ver || 1) + 1 }));
-      return send(res, 200, { tempPassword: temp });
+      return done({ tempPassword: temp });
     }
     const role = String(b.role || "");
-    if (!["admin", "editor", "pastoral"].includes(role)) throw new HttpError(400, "Pick a role.");
+    if (!ROLE_NAMES.includes(role)) throw new HttpError(400, "Pick a role.");
     if (role === "admin" && !isOwner) throw new HttpError(403, "Only the owner can make someone an administrator.");
     if (!validEmail(email)) throw new HttpError(400, "Please enter a valid email address.");
     if (existing) {
       await one("HSET", "users", email, JSON.stringify({ ...existing, role, name: String(b.name || existing.name).slice(0, 80), ver: role !== existing.role ? (existing.ver || 1) + 1 : existing.ver }));
-      return send(res, 200, { ok: true });
+      return done();
     }
     const temp = b.password && validPassword(b.password) ? b.password : randomPassword();
     await one("HSET", "users", email, JSON.stringify({ email, name: String(b.name || "").slice(0, 80) || email, role, ver: 1, createdAt: new Date().toISOString(), ...hashPassword(temp) }));
-    return send(res, 200, { tempPassword: temp });
+    return done({ tempPassword: temp });
   }
   throw new HttpError(400, "Unknown action.");
 });

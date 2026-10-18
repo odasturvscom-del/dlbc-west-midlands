@@ -94,7 +94,15 @@ export async function currentUser(req) {
 export const publicUser = u => u && ({ email: u.email, name: u.name, role: u.role, createdAt: u.createdAt });
 
 /* ---------------- Roles ---------------- */
-export const RANK = { owner: 4, admin: 3, editor: 2, pastoral: 1 };
+export const RANK = { owner: 4, admin: 3, editor: 2, finance: 1, pastoral: 1 }; // finance & pastoral get their own areas, checked by name
+export const ROLE_NAMES = ["admin", "pastoral", "finance", "editor"];
+
+/* ---------------- Audit log ---------------- */
+export function auditCmd(user, action, target, summary = "") {
+  const entry = { at: new Date().toISOString(), by: user ? user.email : "website", name: user ? user.name : "Website visitor", action, target, summary: String(summary).slice(0, 200) };
+  return [["LPUSH", "audit", JSON.stringify(entry)], ["LTRIM", "audit", "0", "4999"]];
+}
+export async function audit(user, action, target, summary) { try { await redis(...auditCmd(user, action, target, summary)); } catch (e) { console.error("audit", e); } }
 export async function requireRole(req, min) {
   const u = await currentUser(req);
   if (!u) throw new HttpError(401, "Please sign in again.");

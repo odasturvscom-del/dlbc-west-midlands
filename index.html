@@ -670,7 +670,7 @@ const IMG_SLOTS = [
 ];
 const MOSAIC_LABELS = ["Worship","Families","Youth","Prayer","Bible study","Fellowship"];
 const SERMON_CATS = ["Sunday Services","Bible Study","Revival","Special Programmes"];
-const NAV = [["home","Home"],["about","About Us"],["ministries","Ministries"],["sermons","Sermons"],["events","Events"],["news","News"],["visit","Plan Your Visit"],["contact","Contact"]];
+const NAV = [["give","Give"],["about","About Us"],["ministries","Ministries"],["sermons","Sermons"],["events","Events"],["news","News"],["visit","Plan Your Visit"],["contact","Contact"]];
 
 /* ================= State ================= */
 const S = {
@@ -836,7 +836,7 @@ const canEmbed = () => !(window.claude && window.claude.use);
 /* ================= Routing ================= */
 function routeFromHash(){
   const h = (location.hash || "").replace(/^#/, "");
-  const known = ["home","about","ministries","sermons","events","news","live","visit","contact","prayer","policies","admin"];
+  const known = ["home","about","ministries","sermons","events","news","live","give","visit","contact","prayer","policies","admin"];
   if (/^post-[A-Za-z0-9]+$/.test(h)){ S.route = "post"; S.postId = h.slice(5); return h; }
   S.route = known.includes(h) ? h : "home";
   return h;
@@ -1159,6 +1159,32 @@ function postPage(){
   </article></div></section>`;
 }
 
+/* ================= Give page ================= */
+function giveSec(){
+  setTimeout(loadGive, 0);
+  return pageHead("Give", "Give with a\n*cheerful heart.*", "“Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver.” 2 Corinthians 9:7") +
+  `<section class="sec off lt"><div class="wrap"><div class="sec-head"><div><span class="eyebrow rule">Ways to give</span><h2 class="h-sec">Choose a fund</h2></div></div><div id="giveFunds"><p class="muted">Loading…</p></div></div></section>
+  <section class="sec" id="giftaid"><div class="wrap visit"><div class="intro"><span class="eyebrow rule">UK taxpayers</span><h2 class="display h-sec" style="font-size:clamp(38px,5vw,66px)">Make it<br>worth <em class="hl">25% more.</em></h2>
+    <p class="lead muted">If you pay UK Income Tax or Capital Gains Tax, Gift Aid lets the church claim an extra 25p for every £1 you give, at no cost to you. You only need to fill this in once.</p></div>
+    <div class="lightcard" id="giftAidBox"><form class="lt" id="giftAidForm" novalidate data-kind="giftaid"><input class="hp" tabindex="-1" autocomplete="off" name="website" id="ga_web" aria-hidden="true">
+      <div class="fgrid"><div class="fld"><label for="ga_title">Title</label><select class="inp" id="ga_title" name="title"><option></option><option>Mr</option><option>Mrs</option><option>Miss</option><option>Ms</option><option>Dr</option><option>Rev</option><option>Pastor</option></select></div>
+      <div class="fld"><label for="ga_email">Email</label><input class="inp" id="ga_email" name="email" type="email" required autocomplete="email"></div>
+      <div class="fld"><label for="ga_first">First name</label><input class="inp" id="ga_first" name="firstName" required autocomplete="given-name"></div><div class="fld"><label for="ga_last">Last name</label><input class="inp" id="ga_last" name="lastName" required autocomplete="family-name"></div>
+      <div class="fld"><label for="ga_house">House name or number</label><input class="inp" id="ga_house" name="houseNumber" required></div><div class="fld"><label for="ga_pc">Postcode</label><input class="inp" id="ga_pc" name="postcode" required autocomplete="postal-code"></div>
+      <label class="chk full" for="ga_ok"><input type="checkbox" id="ga_ok" name="consent" required><span>I want to Gift Aid my donation and any donations I make in the future or have made in the past 4 years to ${esc(cfg().churchName)}. I am a UK taxpayer and understand that if I pay less Income Tax and/or Capital Gains Tax than the amount of Gift Aid claimed on all my donations in that tax year it is my responsibility to pay any difference.</span></label>
+      <div class="full ferr" id="gaErr" role="alert"></div></div>
+      <div class="form-foot"><small>Tell us if you change your name or address, or stop paying UK tax.</small><button class="btn" type="submit">Make my declaration</button></div></form></div></div></section>`;
+}
+async function loadGive(){
+  const box = $("#giveFunds"); if (!box) return;
+  try { const r = await api("GET", "/api/public?what=give"); const box2 = $("#giveFunds"); if (!box2) return;
+    box2.innerHTML = r.funds.length ? `<div class="svc">${r.funds.map((f,i) => `<article class="svc-card ${i === 0 ? "feat" : ""}"><h3 style="margin-top:0;font-size:22px">${esc(f.name)}</h3><p style="max-width:none">${esc(f.description)}</p>
+      ${f.target ? `<div style="margin-top:14px"><div style="height:8px;border-radius:99px;background:rgba(127,150,190,.25);overflow:hidden"><i style="display:block;height:100%;width:${Math.min(100, f.raised / f.target * 100)}%;background:${i === 0 ? "#fff" : "var(--blue)"}"></i></div><small style="display:block;margin-top:6px;opacity:.8">£${f.raised.toLocaleString("en-GB")} of £${f.target.toLocaleString("en-GB")}</small></div>` : ""}
+      <div style="margin-top:auto;padding-top:18px;display:grid;gap:10px">${f.paymentLink ? `<a class="btn ${i === 0 ? "white" : ""}" href="${esc(f.paymentLink)}" target="_blank" rel="noopener">Give online ${ICON.arrow}</a>` : ""}${f.bank ? `<div style="font-size:13px;white-space:pre-line;opacity:.9"><b>Bank transfer</b>\n${esc(f.bank)}</div>` : ""}</div></article>`).join("")}</div>`
+      : `<div class="empty"><span class="xglow"></span><h3>Online giving is coming soon</h3><p>Thank you for your generosity. Please speak to a church officer about giving.</p></div>`;
+  } catch(e){ box.innerHTML = `<p class="muted">Giving details couldn't load. Please try again later.</p>`; }
+}
+
 /* ================= Watch live page ================= */
 function livePlayer(){
   const c = cfg(); const yt = ytInfo(c.livestreamUrl) || ytInfo(c.youtubeUrl); const live = isLive();
@@ -1222,6 +1248,7 @@ function pageHTML(){
     case "news": return pageHead("News & stories", "Church\n*news.*", "Announcements, testimonies and stories from church life across Birmingham and the West Midlands.") + newsSec(true);
     case "post": return postPage();
     case "live": return liveSec();
+    case "give": return giveSec();
     default: return hero() + statement() + about(true) + services() + plan() + ministriesSec(false) + sermonsSec(false) + eventsSec(false) + newsSec(false) + steps() + scripture() + prayer();
   }
 }
@@ -1281,6 +1308,8 @@ function eventModal(id, reg){
     <div class="ev" style="padding:0;display:block"><div class="meta" style="margin-bottom:14px">${e.time?`<span>${ICON.clock}${esc(e.time)}</span>`:""}${e.venue?`<span>${ICON.pin}${esc(e.venue)}</span>`:""}</div></div>
     <p style="white-space:pre-line;color:var(--muted);margin:0 0 20px">${esc(e.details || e.summary || "")}</p>
     ${e.registration ? `<div id="regBox">${reg ? regForm(e) : `<button class="btn" type="button" id="showReg">Register for this event</button>`}</div>` : ""}`);
+  if (e.registration && e.capacity) api("GET", "/api/public?what=places&event=" + encodeURIComponent(e.id)).then(p => { const box = $("#regBox"); if (!box) return; const note = document.createElement("p"); note.className = "pill-label"; note.style.marginBottom = "12px";
+    note.textContent = p.left ? `${p.left} of ${p.capacity} places left` : "This event is full"; box.prepend(note); if (!p.left) $$("#regBox button, #regBox input").forEach(x => x.disabled = true); }).catch(() => {});
   const sr = $("#showReg"); if (sr) sr.onclick = () => { $("#regBox").innerHTML = regForm(e); wireForm($("#regForm")); };
   const rf = $("#regForm"); if (rf) wireForm(rf);
 }
@@ -1319,7 +1348,7 @@ function wireSite(){
   const pl = $("[data-play]"); if (pl) pl.onclick = e => { e.preventDefault(); S.playing = true; $("#playerBox").innerHTML = livePlayer(); };
   const pm = $("#photoMode"); if (pm) pm.onclick = () => { S.photoMode = !S.photoMode; render(true); if (S.photoMode) toast("Click “Change photo” on any highlighted picture"); };
   $$("[data-zoom]").forEach(b => b.onclick = () => { const l = $("#layer"); l.innerHTML = `<div class="lightbox" id="lb" role="dialog" aria-modal="true" aria-label="Photo"><img src="${mediaUrl(b.dataset.zoom)}" alt=""><button type="button" aria-label="Close">×</button></div>`; const close = () => { l.innerHTML = ""; b.focus(); }; $("#lb").onclick = close; $("#lb button").focus(); });
-  ["#visitForm","#prayerForm","#contactForm"].forEach(s => { const f = $(s); f && wireForm(f); });
+  ["#visitForm","#prayerForm","#contactForm","#giftAidForm"].forEach(s => { const f = $(s); f && wireForm(f); });
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 let lastSubmit = 0;
@@ -1340,18 +1369,20 @@ function wireForm(f){
     if (kind === "registration"){ data.eventId = f.dataset.event; data.eventTitle = f.dataset.eventtitle; }
     const btn = f.querySelector('button[type="submit"]'); btn.disabled = true; const label = btn.innerHTML; btn.textContent = "Sending…";
     try {
-      await submitInbox(kind, data);
+      const resp = (await submitInbox(kind, data)) || {};
       const msgs = {
         visit:["We can't wait to meet you", `Thanks${data.name?", "+data.name.split(" ")[0]:""}. We've received your visit plan and someone from our welcome team will be in touch.`],
         prayer:["We're praying with you", "Your request has been received by our pastoral team and will be kept confidential."],
         contact:["Message sent", "Thank you for getting in touch. We'll reply as soon as we can."],
-        registration:["You're registered", "Thanks! Your place has been noted and the church team can see your registration."]
+        registration:["You're registered", resp.code ? `Your ticket code is ${resp.code}. Please show it at the door.` : "Thanks! Your place is booked."],
+        giftaid:["Thank you", "Your Gift Aid declaration has been recorded. It adds 25p to every £1 you give, at no extra cost to you."]
       }[kind];
       const html = `<div class="done" role="status"><span class="tick">${ICON.check}</span><h4>${msgs[0]}</h4><p>${esc(msgs[1])}</p></div>`;
       const box = f.parentElement; if (box.id) SUBMITTED[box.id] = html; box.innerHTML = html;
     } catch(e){
       btn.disabled = false; btn.innerHTML = label;
       const c = cfg();
+      if (e && e.status && e.status < 500 && e.message){ err.textContent = e.message; return; }
       err.innerHTML = `This form couldn't be sent right now. ${c.email||c.phone?`Please contact us directly: ${esc([c.email,c.phone].filter(Boolean).join(" · "))}.`:"Please try again later."}`;
     }
   });
@@ -1548,7 +1579,7 @@ function itemEditor(kind){
   const isEv = kind === "events";
   return head(A.editId === "new" ? (isEv?"New event":"New sermon") : (isEv?"Edit event":"Edit sermon"), "", `<button class="abtn" type="button" id="backList">← Back to ${isEv?"events":"sermons"}</button>`) +
   `<div class="panel"><div class="fgrid">${isEv
-    ? fText("title","Event title",{full:true}) + fText("date","Date",{type:"date"}) + fText("time","Time",{ph:"e.g. 18:30 – 20:30"}) + fText("venue","Venue",{full:true,ph:"Campus name or full address"}) + fText("summary","Short description",{area:true,full:true,rows:2,hint:"Shown in the events list."}) + fText("details","Full details",{area:true,full:true,rows:5,hint:"Shown in “View details”."}) + fImage("image","Event image") + `<div class="full" style="display:flex;gap:18px;flex-wrap:wrap">${fCheck("registration","Allow online registration")}${fCheck("published","Published on the website")}</div>`
+    ? fText("title","Event title",{full:true}) + fText("date","Date",{type:"date"}) + fText("time","Time",{ph:"e.g. 18:30 – 20:30"}) + fText("venue","Venue",{full:true,ph:"Campus name or full address"}) + fText("summary","Short description",{area:true,full:true,rows:2,hint:"Shown in the events list."}) + fText("details","Full details",{area:true,full:true,rows:5,hint:"Shown in “View details”."}) + fImage("image","Event image") + `<div class="full" style="display:flex;gap:18px;flex-wrap:wrap">${fCheck("registration","Allow online registration")}</div>${fText("capacity","Capacity (places)",{type:"number",hint:"Leave blank for no limit. Registrations stop when it's full."})}<div class="full">${fCheck("published","Published on the website")}</div>`
     : fText("title","Sermon title",{full:true}) + fText("speaker","Speaker") + fText("date","Date preached",{type:"date"}) + fText("scripture","Scripture reference",{ph:"e.g. John 15:1–8"}) + fText("category","Category",{select:SERMON_CATS}) + fText("videoUrl","Video link",{full:true,ph:"https://www.youtube.com/watch?v=…",hint:"Visitors open the video on YouTube (or wherever it's hosted)."}) + fImage("image","Thumbnail") + `<div class="full">${fCheck("published","Published on the website")}</div>`}
   </div></div>` + `<div class="savebar" id="savebar"><span>${A.editId==="new"?"Not saved yet.":"Edit and save to update the live site."}</span><div style="display:flex;gap:8px"><button type="button" class="abtn" id="backList2">Cancel</button><button type="button" class="abtn pri" id="saveItem">${A.editId==="new"?"Create":"Save"}</button></div></div>`;
 }
@@ -1850,7 +1881,7 @@ async function boot(){
 /* ---- forms ---- */
 async function submitInbox(type, data){
   const website = (document.querySelector(".hp") || {}).value || "";
-  await api("POST", "/api/submit", {type, data, website});
+  return await api("POST", "/api/submit", {type, data, website});
 }
 async function saveSettingsPatch(patch){ await write("patch", "site/settings", Object.assign({}, patch, {updatedAt: new Date().toISOString()})); }
 async function inboxUpdate(uid, id, fn){
@@ -1871,6 +1902,10 @@ const _renderAdmin = renderAdmin;
 renderAdmin = function(){
   if (!S.booted) return _renderAdmin();
   if (!S.me) return renderLogin();
+  if (!window.CMS_READY){
+    if (!window.CMS_LOADING){ window.CMS_LOADING = true; const sc = document.createElement("script"); sc.src = BASE + "/cms.js?v=2"; sc.onerror = () => { window.CMS_LOADING = false; toast("Couldn't load the admin tools. Check your connection.", true); }; document.body.appendChild(sc); }
+    $("#app").innerHTML = `<div class="gate"><div><span class="xglow breathe"></span><h1>Admin portal</h1><p>Loading…</p></div></div>`; return;
+  }
   return _renderAdmin();
 };
 function renderLogin(){
@@ -1910,7 +1945,7 @@ async function loadUsers(){ try { S.users = (await api("GET", "/api/admin?what=u
 let LAST_TEMP = null;
 function tabTeam(){
   const me = S.me; const admin = ["owner","admin"].includes(me.role); const owner = me.role === "owner";
-  const roleOpts = sel => ["admin","editor","pastoral"].filter(k => owner || k !== "admin").map(k => `<option value="${k}" ${sel===k?"selected":""}>${ROLES[k].label}</option>`).join("");
+  const roleOpts = sel => ["admin","pastoral","finance","editor"].filter(k => owner || k !== "admin").map(k => `<option value="${k}" ${sel===k?"selected":""}>${ROLES[k].label}</option>`).join("");
   const label = r => r === "owner" ? "Owner" : (ROLES[r] || {label: r}).label;
   return head("Users & access", admin ? "Create logins for your team and choose what each person can do." : "Your account.") +
   (LAST_TEMP ? `<div class="notice ok" style="margin-bottom:16px"><b>Login ready for ${esc(LAST_TEMP.email)}</b><br>Temporary password: <code style="font-size:15px;background:#fff;padding:2px 8px;border-radius:6px;user-select:all">${esc(LAST_TEMP.pw)}</code> <button type="button" class="abtn" data-copy="${esc(LAST_TEMP.pw)}" style="padding:3px 10px;margin-left:6px">Copy</button><br>Send it to them privately. They sign in at this site's <b>#admin</b> page and should change it under Users &amp; access. It won't be shown again.</div>` : "") +
@@ -1921,7 +1956,7 @@ function tabTeam(){
   (admin ? `<div class="panel"><h2>Add a person</h2><p class="sub">They'll get a temporary password to sign in with.</p>
     <form id="addUser" class="fgrid" novalidate><div class="fld"><label for="nu_name">Name</label><input class="inp" id="nu_name"></div><div class="fld"><label for="nu_email">Email</label><input class="inp" id="nu_email" type="email"></div>
     <div class="fld"><label for="nu_role">Role</label><select class="inp" id="nu_role">${roleOpts("editor")}</select></div><div class="fld" style="align-self:end"><button class="abtn pri" type="submit" style="min-height:42px">Create login</button></div></form>
-    <div class="roles">${["admin","editor","pastoral"].map(k => `<div><b>${ROLES[k].label}</b>${ROLES[k].desc}</div>`).join("")}</div></div>
+    <div class="roles">${["admin","pastoral","finance","editor"].map(k => `<div><b>${ROLES[k].label}</b>${ROLES[k].desc}</div>`).join("")}</div></div>
   <div class="panel"><h2>Team</h2><p class="sub">${S.users.length} ${S.users.length === 1 ? "person" : "people"} can sign in.</p><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Role</th><th></th></tr></thead><tbody>
     ${S.users.slice().sort((a,b) => (RANKC[b.role]||0) - (RANKC[a.role]||0) || a.name.localeCompare(b.name)).map(u => { const locked = u.role === "owner" || (u.role === "admin" && !owner) || u.email === me.email;
       return `<tr><td><div class="person"><span class="av">${esc((u.name||"?")[0])}</span><div style="min-width:0"><b style="font-size:14px">${esc(u.name)}</b>${u.email===me.email?' <span class="chip blue">You</span>':""}<div class="hint">${esc(u.email)}</div></div></div></td>
@@ -1929,7 +1964,7 @@ function tabTeam(){
       <td><div class="rowacts">${locked ? "" : `<button class="abtn" type="button" data-ureset="${esc(u.email)}">Reset password</button><button class="abtn danger" type="button" data-udel="${esc(u.email)}">Remove</button>`}</div></td></tr>`; }).join("")}
   </tbody></table></div></div>` : "");
 }
-const RANKC = {owner: 4, admin: 3, editor: 2, pastoral: 1};
+const RANKC = {owner: 4, admin: 3, editor: 2, finance: 2, pastoral: 2};
 
 /* ---- photos from Google Drive or any web link (saves database space) ---- */
 function driveToUrl(link){
@@ -1968,7 +2003,6 @@ wireAdmin = function(){
   _wireAdmin();
   const foot = $(".adm-side .foot");
   if (foot && !$("#signOut")) { const b = document.createElement("button"); b.type = "button"; b.id = "signOut"; b.className = "btn ghost sm"; b.textContent = "Sign out"; b.onclick = signOut; foot.insertBefore(b, foot.children[2] || null); }
-  const suiteLink = document.createElement("a"); suiteLink.href = "/suite"; suiteLink.className = "btn ghost sm"; suiteLink.textContent = "Church Suite"; suiteLink.target = "_blank"; suiteLink.rel = "noopener"; foot.insertBefore(suiteLink, foot.children[2] || null);
   const so2 = $("#signOut2"); if (so2) so2.onclick = signOut;
   const drv = $("#drvBtn"); if (drv) drv.onclick = () => driveModal();
   $$("[data-copy]").forEach(btn => btn.onclick = async () => { try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied"; } catch(e){} });
